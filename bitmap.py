@@ -378,9 +378,9 @@ class Bitmap(object):
 	#Vector 3 transformado
 	def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
 		#Transformando los datos
-		t1 = round((vertex[0] + translate[0]) * scale[0])
-		t2 = round((vertex[1] + translate[1]) * scale[1])
-		t3 = round((vertex[2] + translate[2]) * scale[2])
+		t1 = int(round((vertex[0] + translate[0]) * scale[0]))
+		t2 = int(round((vertex[1] + translate[1]) * scale[1]))
+		t3 = int(round((vertex[2] + translate[2]) * scale[2]))
 
 		return v3(t1,t2,t3)
 	#Funcion para la renderizacion sin utilizar texturas
@@ -620,20 +620,17 @@ class Bitmap(object):
 		mp2 = multiplicarMatrices(self.projection, mp1)
 		mp3 = multiplicarMatrices(self.viewPort, mp2)
 		self.mPipeline = mp3
-		print(self.projection)
-		print(mp2)
-		print(mp3)
 	#Transformamos la matriz
 	def transformMatriz(self, vector):
 		#Mandamos la Funcion
 		self.matrizPipeline()
 		#creamos las matrices
-		newVertex = [vector.x,vector.y,vector.z,1]
+		newVertex = [[vector.x],[vector.y],[vector.z],[1]]
 		multVector = multiplicarMatrices(self.mPipeline,newVertex)
 		#Valores para el vector
-		a = multVector[0][0]/multVector[3][0]
-		b = multVector[1][0]/multVector[3][0]
-		c = multVector[2][0]/multVector[3][0]
+		a = int(multVector[0][0]/multVector[3][0])
+		b = int(multVector[1][0]/multVector[3][0])
+		c = int(multVector[2][0]/multVector[3][0])
 		#Retronamos los Valores
 		return v3(a,b,c)
 
@@ -658,9 +655,9 @@ class Bitmap(object):
 				vector_3 = self.transform(vertexes[f3], translate, scale)
 				#print(vector_1)
 				#transformamos los datos con la matriz
-				vector_1 = self.transformMatriz(vector_1)
-				vector_2 = self.transformMatriz(vector_2)
-				vector_3 = self.transformMatriz(vector_3)
+				V1 = self.transformMatriz(vector_1)
+				V2 = self.transformMatriz(vector_2)
+				V3 = self.transformMatriz(vector_3)
 				#Datos para pintar cada dato
 				vector_normal = normal(pCruz(resta(V1, V2), resta(V3, V1)))
 				intensidad = dot(vector_normal, luz)
