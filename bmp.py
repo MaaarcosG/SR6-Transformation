@@ -296,21 +296,16 @@ class Bitmap(object):
 		bbox_min, bbox_max = bbox(A,B,C)
 		for x in range(bbox_min.x, bbox_max.x + 1):
 			for y in range(bbox_min.y, bbox_max.y + 1):
-				#Utilizamos coordenadas baricentricas
 				w, v, u = baricentricas(A, B, C, V2(x, y))
-				#Evitamos numero negativos
 				if w < 0 or v < 0 or u < 0:
 					continue
-				#Si encuentra un archivo de textura
 				if texture:
 					tA, tB, tC = texture_coords
 					tx = tA.x * w + tB.x * v + tC.x * u
 					ty = tA.y * w + tB.y * v + tC.y * u
 					color = texture.get_color(tx, ty, intensity)
-				#Encontramos el valor de z
 				z = A.z * w + B.z * v + C.z * u
 				if x < self.width and y<self.height and x >=0 and y>=0:
-					#Funcion para llenar cada uno de los espacios
 					if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
 						self.point(x, y, color)
 						self.zbuffer[x][y] = z
@@ -331,6 +326,72 @@ class Bitmap(object):
 		c = round((newVertex[2][0])/newVertex[3][0])
 		#Añadimos los valores a una nueva lista
 		return (V3(a,b,c))
+
+	#Funcion para cargar
+	def load(self, filename, mtlFile=None, translate=(0,0,0), scale=(1,1,1), rotate=(0,0,0), ojo=V3(0,0,0), arriba=V3(0,0,0), centro=V3(0,0,0), texture=None):
+		objetos = Obj(filename, mtlFile)
+		#Mandamos los valores a las funciones que encuentran las MATRICES
+		self.ModelMatriz(translate,scale,rotate)
+		self.lookAt(ojo, arriba, centro)
+		#Llamamos la funcion necesaria
+		self.ViewPortMatriz()
+		#Verificamos si existe un archivo para la textura
+		if texture == None:
+			pass
+		else:
+			textura = Texture(texture)
+		#Archivo mtlFile
+		if mtlFile:
+			mtl = Mtl(mtlFile)
+			vR = mtl.materiales[0][0]
+			vG = mtl.materiales[0][1]
+			vB = mtl.materiales[0][2]
+			#print(vR)
+		#Luz
+		ligth = V3(0,0,1)
+		#Datos para reccorer el Ciclo
+		caras = objetos.faces
+		vertexes = objetos.vertices
+
+		for face in caras:
+			vcount = len(face)
+			#print(vcount)
+			if vcount == 3:
+				f1 = face[0][0] - 1
+				f2 = face[1][0] - 1
+				f3 = face[2][0] - 1
+				#transformamos los datos a los VECTORES
+				a = self.transform(V3(*vertexes[f1]),translate, scale)
+				b = self.transform(V3(*vertexes[f2]),translate, scale)
+				c = self.transform(V3(*vertexes[f3]),translate, scale)
+				'''
+				print('1', a)
+				print('2', b)
+				print('3', c)
+				'''
+				#Por si no existe un archivo de texturas
+				vector_normal = norm(cross(sub(b,a), sub(c,a)))
+				intensidad = dot(vector_normal, ligth)
+				#Si no encuentra un texturas
+				if not texture:
+					red = round(255*intensidad)
+					green = round(255*intensidad)
+					blue = round(255*intensidad)
+					#Evitamos los numeros negativos
+					if (red<0) or (green<0) or (blue<0):
+						continue
+					#Mandamos los valores a triangulos
+					self.triangulos(a,b,c, color(red,green,blue))
+				else:
+					t1 = face[0][0] - 1
+					t2 = face[1][0] - 1
+					t3 = face[2][0] - 1
+					#Mandamos los Valores
+					Texture_A = V3(*objetos.textVert[t1],0)
+					Texture_B = V3(*objetos.textVert[t2],0)
+					Texture_C = V3(*objetos.textVert[t3],0)
+					#Mandamos los datos al triangulos
+					self.triangulos(Texture_A,Texture_B,Texture_C, color(), None, texture=textura, tc=(Texture_A,Texture_B,Texture_C), intensity=intensidad)
 
 	#Matriz Model
 	def ModelMatriz(self, translate, scale, rotate):
@@ -424,74 +485,3 @@ class Bitmap(object):
 		valor = norm(sub(ojo,centro))
 		#Mandamos valores a la matriz de projection
 		self.ProjectionMatriz(-1/length(sub(ojo,centro)))
-
-	#Funcion para cargar
-	def load(self, filename, mtlFile=None, translate=(0,0,0), scale=(1,1,1), rotate=(0,0,0), ojo=V3(0,0,0), arriba=V3(0,0,0), centro=V3(0,0,0), texture=None):
-		objetos = Obj(filename)
-		#Mandamos los valores a las funciones que encuentran las MATRICES
-		self.ModelMatriz(translate,scale,rotate)
-		self.lookAt(ojo, arriba, centro)
-		#Llamamos la funcion necesaria
-		self.ViewPortMatriz()
-		#Verificamos si existe un archivo para la textura
-		if texture == None:
-			pass
-		else:
-			textura = Texture(texture)
-		#Archivo mtlFile
-		if mtlFile:
-			mtl = Mtl(mtlFile)
-			vR = mtl.materiales[0][0]
-			vG = mtl.materiales[0][1]
-			vB = mtl.materiales[0][2]
-			#print(vR)
-		else:
-			vR = color(255,255,255)
-			vG = color(255,255,255)
-			vB = color(255,255,255)
-			#print(vR)
-		#Luz
-		ligth = V3(0,0,1)
-		#Datos para reccorer el Ciclo
-		caras = objetos.faces
-		vertexes = objetos.vertices
-
-		for face in caras:
-			vcount = len(face)
-			#print(vcount)
-			if vcount == 3:
-				f1 = face[0][0] - 1
-				f2 = face[1][0] - 1
-				f3 = face[2][0] - 1
-				#transformamos los datos a los VECTORES
-				a = self.transform(V3(*vertexes[f1]),translate, scale)
-				b = self.transform(V3(*vertexes[f2]),translate, scale)
-				c = self.transform(V3(*vertexes[f3]),translate, scale)
-				'''
-				print('1', a)
-				print('2', b)
-				print('3', c)
-				'''
-				#Por si no existe un archivo de texturas
-				vector_normal = norm(cross(sub(b,a), sub(c,a)))
-				intensidad = dot(vector_normal, ligth)
-				#Si no encuentra un texturas
-				if not texture:
-					red = round(255*vR*intensidad)
-					green = round(255*vG*intensidad)
-					blue = round(255*vB*intensidad)
-					#Evitamos los numeros negativos
-					if (red<0) or (green<0) or (blue<0):
-						continue
-					#Mandamos los valores a triangulos
-					self.triangulos(a,b,c, color(red,green,blue))
-				else:
-					t1 = face[0][0] - 1
-					t2 = face[1][0] - 1
-					t3 = face[2][0] - 1
-					#Mandamos los Valores
-					Texture_A = V3(*objetos.textVert[t1],0)
-					Texture_B = V3(*objetos.textVert[t2],0)
-					Texture_C = V3(*objetos.textVert[t3],0)
-					#Mandamos los datos al triangulos
-					self.triangulos(Texture_A,Texture_B,Texture_C, color(), None, texture=textura, tc=(Texture_A,Texture_B,Texture_C), intensity=intensidad)
